@@ -424,7 +424,7 @@ const DEMO_NOTICES=[
 
 const FB_ON = !firebaseConfig.apiKey.includes('YOUR_');
 let db = null;
-if (FB_ON) { try { const app=initializeApp(FB_CONFIG); db=getDatabase(app); } catch(e){ console.warn('Firebase:',e); } }
+if (FB_ON) { try { const app=initializeApp(firebaseConfig); db=getDatabase(app); } catch(e){ console.warn('Firebase:',e); } }
 
 // ── DEMO STORE ──
 function getLocal() { return JSON.parse(localStorage.getItem('solace_local')||'{}'); }
