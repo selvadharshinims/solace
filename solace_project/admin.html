@@ -422,7 +422,7 @@ const DEMO_NOTICES=[
   {id:3,tag:'alert',title:'Lift Maintenance',body:'Block A lift under maintenance 18 Mar.',date:'14 Mar 2026'},
 ];
 
-const FB_ON = !FB_CONFIG.apiKey.includes('YOUR_');
+const FB_ON = !firebaseConfig.apiKey.includes('YOUR_');
 let db = null;
 if (FB_ON) { try { const app=initializeApp(FB_CONFIG); db=getDatabase(app); } catch(e){ console.warn('Firebase:',e); } }
 

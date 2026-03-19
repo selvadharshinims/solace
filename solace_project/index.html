@@ -535,7 +535,7 @@ const DEMO_DATA = {
 };
 
 // ── FIREBASE OR DEMO MODE ──
-const FB_ON = !FB_CONFIG.apiKey.includes('YOUR_');
+const FB_ON = !firebaseConfig.apiKey.includes('YOUR_');
 let db = null;
 if (FB_ON) {
   try { const app = initializeApp(FB_CONFIG); db = getDatabase(app); document.getElementById('demo-note').style.display='none'; }
