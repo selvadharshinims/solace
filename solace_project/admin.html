@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solace Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;--surf:#1a1d27;--surf2:#22263a;--bdr:#2e3347;
+  --accent:#c89a6a;--green:#22c55e;--red:#e53e3e;--blue:#3b82f6;--yellow:#f59e0b;
+  --text:#f0eee8;--sub:#8892a4;--r:14px;--sh:0 4px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+button,input,textarea,select{font-family:inherit;}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0d1117,#1a1d27,#0d1f16);padding:20px;}
+.login-box{background:var(--surf);border:1px solid var(--bdr);border-radius:24px;padding:clamp(32px,5vw,52px) clamp(28px,5vw,44px);width:100%;max-width:420px;text-align:center;box-shadow:var(--sh);}
+.login-box h1{font-family:'Playfair Display',serif;font-size:clamp(28px,5vw,36px);color:var(--accent);margin-bottom:4px;}
+.login-box .lb-sub{color:var(--sub);font-size:14px;margin-bottom:36px;}
+.lf{text-align:left;margin-bottom:18px;}
+.lf label{display:block;font-size:11px;color:var(--sub);margin-bottom:7px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.lf input{width:100%;background:var(--surf2);border:1.5px solid var(--bdr);border-radius:10px;padding:clamp(11px,2.5vw,14px) 16px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s;}
+.lf input:focus{border-color:var(--accent);}
+.btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:clamp(13px,3vw,16px);font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s;}
+.btn-login:hover{opacity:.9;}
+.l-err{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+.l-err.show{display:block;}
+.l-hint{margin-top:16px;font-size:12px;color:var(--sub);}
+
+/* ── ADMIN APP ── */
+#admin-app{display:none;}
+
+/* RESPONSIVE: sidebar collapses on mobile */
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:240px;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:transform .25s;}
+.sidebar-logo{padding:22px 20px;border-bottom:1px solid var(--bdr);}
+.sidebar-logo h1{font-family:'Playfair Display',serif;font-size:22px;color:var(--accent);}
+.sidebar-logo p{font-size:12px;color:var(--sub);margin-top:2px;}
+.sidebar-nav{flex:1;padding:14px 10px;overflow-y:auto;}
+.nav-i{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--sub);margin-bottom:3px;border:none;background:none;width:100%;text-align:left;transition:background .15s,color .15s;}
+.nav-i:hover{background:var(--surf2);color:var(--text);}
+.nav-i.active{background:rgba(200,154,106,.15);color:var(--accent);}
+.nav-icon{font-size:17px;width:22px;text-align:center;}
+.nav-cnt{margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:2px 7px;font-size:11px;font-weight:700;}
+.sidebar-footer{padding:14px 18px;border-top:1px solid var(--bdr);}
+.admin-who{font-size:12px;color:var(--sub);margin-bottom:8px;}
+.admin-who strong{color:var(--text);}
+.btn-logout{background:none;border:1px solid var(--bdr);border-radius:8px;padding:8px 14px;color:var(--sub);font-size:13px;cursor:pointer;width:100%;}
+.btn-logout:hover{border-color:var(--red);color:var(--red);}
+
+/* HAMBURGER (mobile) */
+.hamburger{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:20px;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}
+.sidebar-overlay.show{display:block;}
+
+.main{margin-left:240px;flex:1;padding:clamp(20px,3vw,36px);min-height:100vh;}
+
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .hamburger{display:block;}
+  .stats-row{grid-template-columns:repeat(2,1fr)!important;}
+  .dash-grid{grid-template-columns:1fr!important;}
+  .form-row{grid-template-columns:1fr!important;}
+}
+@media(max-width:480px){
+  .stats-row{grid-template-columns:1fr 1fr!important;}
+  .main{padding:16px;}
+  .page-hdr{flex-direction:column;align-items:flex-start;gap:10px;}
+}
+
+/* ── PAGES ── */
+.page{display:none;}
+.page.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(16px,3vw,28px);flex-wrap:wrap;gap:10px;padding-top:clamp(8px,2vw,0px);}
+.page-hdr h2{font-family:'Playfair Display',serif;font-size:clamp(22px,4vw,28px);}
+.page-hdr p{font-size:13px;color:var(--sub);margin-top:3px;}
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(10px,2vw,16px);margin-bottom:clamp(20px,3vw,32px);}
+.stat-box{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:clamp(16px,3vw,22px);}
+.sb-val{font-size:clamp(24px,4vw,32px);font-weight:700;margin-bottom:4px;}
+.sb-label{font-size:13px;color:var(--sub);}
+.sb-green .sb-val{color:var(--green);}
+.sb-yellow .sb-val{color:var(--yellow);}
+.sb-blue .sb-val{color:var(--blue);}
+.sb-red .sb-val{color:var(--red);}
+
+/* CARDS & TABLES */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.card-hdr{padding:clamp(14px,2.5vw,18px) clamp(16px,3vw,22px);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.card-hdr h3{font-size:clamp(14px,2.5vw,16px);font-weight:700;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:400px;}
+th{padding:11px 16px;text-align:left;font-size:11px;letter-spacing:1px;color:var(--sub);font-weight:700;background:var(--surf2);border-bottom:1px solid var(--bdr);}
+td{padding:13px 16px;border-bottom:1px solid var(--bdr);font-size:14px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.b-pending{background:rgba(245,158,11,.15);color:#f59e0b;}
+.b-completed{background:rgba(34,197,94,.15);color:#22c55e;}
+.b-rejected{background:rgba(229,62,62,.15);color:#e53e3e;}
+.b-info{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-event{background:rgba(34,197,94,.15);color:#22c55e;}
+.b-alert{background:rgba(229,62,62,.15);color:#e53e3e;}
+
+/* BUTTONS */
+.btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap;}
+.btn:hover{opacity:.85;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-yellow{background:var(--yellow);color:#000;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-ghost{background:var(--surf2);color:var(--text);border:1px solid var(--bdr);}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:16px;padding:4px;color:var(--sub);}
+.btn-icon:hover{color:var(--red);}
+.action-btns{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-row.full{grid-template-columns:1fr;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12px;color:var(--sub);font-weight:600;}
+.field input,.field select,.field textarea{background:var(--surf2);border:1.5px solid var(--bdr);border-radius:10px;padding:10px 13px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field select{cursor:pointer;}
+.field select option{background:var(--surf2);}
+.field textarea{resize:vertical;min-height:75px;}
+.add-form{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--r);padding:clamp(16px,3vw,22px);margin-bottom:20px;}
+.add-form h4{font-size:15px;font-weight:700;margin-bottom:14px;color:var(--accent);}
+.form-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+
+/* RESIDENTS PAGE */
+.resident-card{background:var(--surf2);border:1px solid var(--bdr);border-radius:12px;padding:clamp(14px,3vw,20px);display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.r-av{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#3aaa8a,#3d607a);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;}
+.r-info{flex:1;min-width:180px;}
+.r-name{font-weight:700;font-size:16px;}
+.r-sub{font-size:13px;color:var(--sub);margin-top:2px;}
+.r-apt{font-size:12px;color:var(--accent);font-weight:700;margin-top:4px;}
+.r-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.r-contacts{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;}
+.r-contact-chip{background:var(--surf);border:1px solid var(--bdr);border-radius:20px;padding:4px 12px;font-size:12px;}
+
+/* CHECK-INS WELLBEING */
+.wellbeing-card{background:var(--surf2);border:1px solid var(--bdr);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
+.wb-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.dot-green{background:var(--green);}
+.dot-yellow{background:var(--yellow);}
+.dot-red{background:var(--red);}
+
+/* DASH GRID */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.feed-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);}
+.feed-item:last-child{border-bottom:none;}
+.feed-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0;}
+.feed-text{font-size:13px;line-height:1.5;}
+.feed-time{font-size:11px;color:var(--sub);margin-top:2px;}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.f-tab{background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--sub);transition:all .15s;}
+.f-tab:hover{border-color:var(--accent);color:var(--accent);}
+.f-tab.active{background:rgba(200,154,106,.15);border-color:var(--accent);color:var(--accent);}
+
+/* MODAL */
+.amodal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.amodal-overlay.show{display:flex;}
+.amodal{background:var(--surf);border:1px solid var(--bdr);border-radius:20px;padding:clamp(22px,4vw,30px);width:100%;max-width:500px;box-shadow:var(--sh);max-height:90vh;overflow-y:auto;}
+.amodal h3{font-size:clamp(17px,3vw,20px);font-weight:700;margin-bottom:16px;}
+.amodal-btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.amodal-btns button{flex:1;min-width:80px;}
+
+/* TOAST */
+.admin-toast{position:fixed;bottom:24px;right:24px;background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:12px 22px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(8px);box-shadow:var(--sh);}
+.admin-toast.show{opacity:1;transform:translateY(0);}
+.admin-toast.success{border-color:var(--green);color:var(--green);}
+.admin-toast.error{border-color:var(--red);color:var(--red);}
+
+/* EMPTY */
+.empty-row td{text-align:center;color:var(--sub);padding:32px!important;}
+.loading-row td{text-align:center;color:var(--sub);padding:24px!important;}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Solace Admin</h1>
+    <div class="lb-sub">Community Management Dashboard</div>
+    <div class="lf"><label>Username</label><input type="text" id="la-user" placeholder="admin" value="admin"></div>
+    <div class="lf"><label>Password</label><input type="password" id="la-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">Sign In →</button>
+    <div class="l-err" id="l-err">❌ Invalid credentials</div>
+    <p class="l-hint">Default: admin / admin123</p>
+  </div>
+</div>
+
+<!-- ═══ ADMIN APP ═══ -->
+<div id="admin-app">
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="layout">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><h1>Solace</h1><p>Admin Dashboard</p></div>
+      <nav class="sidebar-nav">
+        <button class="nav-i active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</button>
+        <button class="nav-i" onclick="showPage('residents',this)"><span class="nav-icon">🏠</span>Residents</button>
+        <button class="nav-i" onclick="showPage('activities',this)"><span class="nav-icon">📅</span>Activities</button>
+        <button class="nav-i" onclick="showPage('notices',this)"><span class="nav-icon">📢</span>Notices</button>
+        <button class="nav-i" onclick="showPage('requests',this)"><span class="nav-icon">🤝</span>Help Requests<span class="nav-cnt" id="nav-cnt">0</span></button>
+        <button class="nav-i" onclick="showPage('checkins',this)"><span class="nav-icon">✅</span>Check-ins & Mood</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="admin-who">Logged in as<br><strong>Admin</strong></div>
+        <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <!-- ── DASHBOARD ── -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-hdr">
+          <div><h2>Dashboard</h2><p>Today's overview across all apartments</p></div>
+          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box sb-green"><div class="sb-val" id="d-ci">0</div><div class="sb-label">Check-ins Today</div></div>
+          <div class="stat-box sb-yellow"><div class="sb-val" id="d-pend">0</div><div class="sb-label">Pending Requests</div></div>
+          <div class="stat-box sb-blue"><div class="sb-val" id="d-acts">0</div><div class="sb-label">Activities</div></div>
+          <div class="stat-box sb-red"><div class="sb-val" id="d-ntc">0</div><div class="sb-label">Notices</div></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card"><div class="card-hdr"><h3>Recent Requests</h3></div>
+            <div class="table-wrap"><table><thead><tr><th>APT</th><th>TYPE</th><th>STATUS</th></tr></thead><tbody id="dash-reqs"></tbody></table></div>
+          </div>
+          <div class="card"><div class="card-hdr"><h3>Activity Feed</h3></div>
+            <div style="padding:14px 18px;max-height:280px;overflow-y:auto" id="dash-feed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RESIDENTS ── -->
+      <div id="page-residents" class="page">
+        <div class="page-hdr">
+          <div><h2>Residents & Apartments</h2><p>Add, edit or remove apartment access</p></div>
+          <button class="btn btn-accent" onclick="toggleForm('add-resident-form',this,'+ Add Apartment','✕ Close')">+ Add Apartment</button>
+        </div>
+        <div class="add-form" id="add-resident-form" style="display:none">
+          <h4>🏠 New Apartment</h4>
+          <div class="form-row">
+            <div class="field"><label>Apartment Number</label><input type="text" id="r-apt" placeholder="e.g. C-101"></div>
+            <div class="field"><label>Passcode</label><input type="text" id="r-pass" placeholder="e.g. 1234" maxlength="10"></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Resident Name</label><input type="text" id="r-name" placeholder="Full name"></div>
+            <div class="field"><label>Email (optional)</label><input type="email" id="r-email" placeholder="email@example.com"></div>
+          </div>
+          <div class="form-row full">
+            <div class="field"><label>Emergency Contacts (format: Name:Phone, Name:Phone)</label><input type="text" id="r-contacts" placeholder="Son:9876543210, Daughter:8765432109"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-accent" onclick="addResident()">Save Apartment</button>
+            <button class="btn btn-ghost" onclick="toggleForm('add-resident-form',null,'+ Add Apartment','✕ Close')">Cancel</button>
+          </div>
+        </div>
+        <div id="residents-list"><div style="color:var(--sub);padding:20px">Loading residents…</div></div>
+      </div>
+
+      <!-- ── ACTIVITIES ── -->
+      <div id="page-activities" class="page">
+        <div class="page-hdr">
+          <div><h2>Activities & Schedule</h2><p>Manage today's schedule — syncs instantly to all residents</p></div>
+          <button class="btn btn-accent" onclick="toggleForm('add-act-form',this,'+ Add Activity','✕ Close')">+ Add Activity</button>
+        </div>
+        <div class="add-form" id="add-act-form" style="display:none">
+          <h4>➕ New Activity</h4>
+          <div class="form-row">
+            <div class="field"><label>Activity Name</label><input type="text" id="a-name" placeholder="e.g. Morning Yoga"></div>
+            <div class="field"><label>Time</label><input type="time" id="a-time"></div>
+          </div>
+          <div class="form-row full">
+            <div class="field"><label>Location</label><input type="text" id="a-loc" placeholder="e.g. Community Hall"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-accent" onclick="addActivity()">Save Activity</button>
+            <button class="btn btn-ghost" onclick="toggleForm('add-act-form',null,'+ Add Activity','✕ Close')">Cancel</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>Scheduled Activities</h3><span id="act-count" style="font-size:13px;color:var(--sub)"></span></div>
+          <div class="table-wrap"><table><thead><tr><th>TIME</th><th>ACTIVITY</th><th>LOCATION</th><th>ACTION</th></tr></thead><tbody id="act-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ── NOTICES ── -->
+      <div id="page-notices" class="page">
+        <div class="page-hdr">
+          <div><h2>Notices & Announcements</h2><p>Post updates visible to all residents instantly</p></div>
+          <button class="btn btn-accent" onclick="toggleForm('add-ntc-form',this,'+ Post Notice','✕ Close')">+ Post Notice</button>
+        </div>
+        <div class="add-form" id="add-ntc-form" style="display:none">
+          <h4>📢 New Notice</h4>
+          <div class="form-row">
+            <div class="field"><label>Title</label><input type="text" id="n-title" placeholder="Notice title"></div>
+            <div class="field"><label>Tag</label><select id="n-tag"><option value="info">ℹ️ Information</option><option value="alert">🚨 Alert</option><option value="event">🎉 Event</option></select></div>
+          </div>
+          <div class="form-row full">
+            <div class="field"><label>Message</label><textarea id="n-body" placeholder="Write the notice content…"></textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-accent" onclick="addNotice()">Post Notice</button>
+            <button class="btn btn-ghost" onclick="toggleForm('add-ntc-form',null,'+ Post Notice','✕ Close')">Cancel</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>All Notices</h3></div>
+          <div class="table-wrap"><table><thead><tr><th>TAG</th><th>TITLE</th><th>DATE</th><th>ACTION</th></tr></thead><tbody id="ntc-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ── REQUESTS ── -->
+      <div id="page-requests" class="page">
+        <div class="page-hdr"><div><h2>Help Requests</h2><p>Review and update resident requests — status syncs live</p></div></div>
+        <div class="filter-tabs">
+          <span class="f-tab active" onclick="setFilter('all',this)">All</span>
+          <span class="f-tab" onclick="setFilter('pending',this)">⏳ Pending</span>
+          <span class="f-tab" onclick="setFilter('completed',this)">✅ Completed</span>
+          <span class="f-tab" onclick="setFilter('rejected',this)">❌ Rejected</span>
+        </div>
+        <div class="card">
+          <div class="table-wrap"><table><thead><tr><th>APT</th><th>TYPE</th><th>NOTES</th><th>DATE</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="req-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ── CHECK-INS & MOOD ── -->
+      <div id="page-checkins" class="page">
+        <div class="page-hdr"><div><h2>Check-ins & Mood</h2><p>Monitor resident wellbeing across all apartments</p></div></div>
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-box sb-green"><div class="sb-val" id="ci-total">0</div><div class="sb-label">Total Check-ins</div></div>
+          <div class="stat-box sb-blue"><div class="sb-val" id="ci-today">0</div><div class="sb-label">Today</div></div>
+          <div class="stat-box sb-yellow"><div class="sb-val" id="ci-mood">—</div><div class="sb-label">Latest Mood (all)</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>Resident Wellbeing Overview</h3></div>
+          <div style="padding:16px" id="wellbeing-list"></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <div class="card-hdr"><h3>All Check-ins</h3></div>
+            <div class="table-wrap"><table><thead><tr><th>APT</th><th>DATE</th><th>MOOD</th></tr></thead><tbody id="ci-table"></tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="card-hdr"><h3>Mood Log</h3></div>
+            <div class="table-wrap"><table><thead><tr><th>APT</th><th>DATE</th><th>MOOD</th><th>NOTE</th></tr></thead><tbody id="mood-table"></tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end main -->
+  </div><!-- end layout -->
+</div><!-- end admin-app -->
+
+<!-- CONFIRM MODAL -->
+<div class="amodal-overlay" id="confirm-modal">
+  <div class="amodal">
+    <h3 id="cm-title">Are you sure?</h3>
+    <p id="cm-msg" style="color:var(--sub);font-size:14px;margin-top:6px"></p>
+    <div class="amodal-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-red" id="cm-yes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-toast" id="a-toast"></div>
+
+<script type="module">
+// ══════════════════════════════════════════════════
+// FIREBASE CONFIG — same as resident app
+// ══════════════════════════════════════════════════
+import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, push, set, update, remove, serverTimestamp, off }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const FB_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+// ── DEMO DATA (same as resident) ──
+const DEMO_APTS = {
+  'A-101':{ passcode:'1234', name:'Meena Krishnan', email:'meena@example.com', contacts:[{name:'Son',phone:'9876543210'}] },
+  'A-305':{ passcode:'5678', name:'selvadharshini', email:'selvadharshinims@gmail.com', contacts:[{name:'son',phone:'8056116846'},{name:'daughter',phone:'6379311304'}] },
+  'B-102':{ passcode:'2345', name:'Rajan Pillai',   email:'rajan@example.com',  contacts:[{name:'Son',phone:'7654321098'}] },
+  'B-204':{ passcode:'6789', name:'Lakshmi Devi',   email:'lakshmi@example.com',contacts:[{name:'Daughter',phone:'9123456780'}] },
+};
+const DEMO_ACTIVITIES=[
+  {id:1,time:'7:00 AM',name:'Morning Yoga',location:'Community Hall'},
+  {id:2,time:'9:30 AM',name:'Breakfast Gathering',location:'Dining Area'},
+  {id:3,time:'3:00 PM',name:'Afternoon Walk',location:'Garden'},
+];
+const DEMO_NOTICES=[
+  {id:1,tag:'info',title:'Water Supply Interruption',body:'Water interrupted 17 Mar 10 AM–2 PM.',date:'16 Mar 2026'},
+  {id:2,tag:'event',title:'Yoga Session Tomorrow',body:'Morning yoga 7 AM, Community Hall.',date:'15 Mar 2026'},
+  {id:3,tag:'alert',title:'Lift Maintenance',body:'Block A lift under maintenance 18 Mar.',date:'14 Mar 2026'},
+];
+
+const FB_ON = !FB_CONFIG.apiKey.includes('YOUR_');
+let db = null;
+if (FB_ON) { try { const app=initializeApp(FB_CONFIG); db=getDatabase(app); } catch(e){ console.warn('Firebase:',e); } }
+
+// ── DEMO STORE ──
+function getLocal() { return JSON.parse(localStorage.getItem('solace_local')||'{}'); }
+function setLocal(data) { localStorage.setItem('solace_local',JSON.stringify(data)); }
+function getDemoPath(path) {
+  const parts=path.split('/'); let d={apartments:DEMO_APTS,activities:arr2obj(DEMO_ACTIVITIES),notices:arr2obj(DEMO_NOTICES),...getLocal()};
+  for(const p of parts){if(d&&typeof d==='object')d=d[p];else return null;} return d||null;
+}
+function setDemoPath(path,val){
+  const parts=path.split('/'); const store=getLocal(); let obj=store;
+  for(let i=0;i<parts.length-1;i++){if(!obj[parts[i]])obj[parts[i]]={};obj=obj[parts[i]];}
+  obj[parts[parts.length-1]]=val; setLocal(store);
+}
+function pushDemo(path,val){
+  const key='k_'+Date.now(); const parts=path.split('/'); const store=getLocal(); let obj=store;
+  for(const p of parts){if(!obj[p])obj[p]={};obj=obj[p];} obj[key]={...val,createdAt:Date.now()};
+  setLocal(store); return key;
+}
+function deleteDemo(path){
+  const parts=path.split('/'); const store=getLocal(); let obj=store;
+  for(let i=0;i<parts.length-1;i++){if(!obj[parts[i]])return;obj=obj[parts[i]];}
+  delete obj[parts[parts.length-1]]; setLocal(store);
+}
+
+// ── DB HELPERS ──
+const listeners=[];
+function listen(path,cb){
+  if(db){const r=ref(db,path);onValue(r,s=>cb(s.val()));listeners.push(r);}
+  else{cb(getDemoPath(path));}
+}
+function writeDB(path,val){
+  if(db)return set(ref(db,path),val);
+  setDemoPath(path,val);return Promise.resolve();
+}
+function pushDB(path,val){
+  if(db)return push(ref(db,path),{...val,createdAt:serverTimestamp()});
+  pushDemo(path,val);return Promise.resolve();
+}
+function updateDB(path,val){
+  if(db)return update(ref(db,path),val);
+  const cur=getDemoPath(path)||{}; setDemoPath(path,{...cur,...val}); return Promise.resolve();
+}
+function deleteDB(path){
+  if(db)return remove(ref(db,path));
+  deleteDemo(path);return Promise.resolve();
+}
+
+// ══════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════
+const CREDS={admin:'admin123'};
+window.doLogin=function(){
+  const u=document.getElementById('la-user').value.trim();
+  const p=document.getElementById('la-pass').value;
+  const err=document.getElementById('l-err');
+  err.classList.remove('show');
+  if(CREDS[u]&&CREDS[u]===p){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('admin-app').style.display='block';
+    refreshAll();
+  } else {err.textContent='❌ Invalid credentials';err.classList.add('show');}
+};
+window.doLogout=function(){
+  document.getElementById('admin-app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+};
+
+// ══════════════════════════════════════════════════
+// SIDEBAR (mobile)
+// ══════════════════════════════════════════════════
+window.toggleSidebar=function(){
+  const s=document.getElementById('sidebar');const o=document.getElementById('sidebar-overlay');
+  s.classList.toggle('open');o.classList.toggle('show');
+};
+window.closeSidebar=function(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+};
+
+// ══════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════
+window.showPage=function(p,btn){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-i').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(btn)btn.classList.add('active');
+  closeSidebar();
+  const renders={dashboard:renderDashboard,residents:renderResidents,activities:renderActivities,notices:renderNotices,requests:renderRequests,checkins:renderCheckins};
+  if(renders[p])renders[p]();
+};
+
+// ══════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════
+function renderDashboard(){
+  const today=fmtShort(new Date());
+  listen('apartments', apts=>{
+    const aptList=Object.keys(apts||{});
+    document.getElementById('d-acts').textContent=0;
+    document.getElementById('d-ntc').textContent=0;
+    let pending=0,todayCI=0,allFeed=[];
+    let loaded=0;
+    listen('activities',acts=>{document.getElementById('d-acts').textContent=Object.keys(acts||{}).length;});
+    listen('notices',ntcs=>{document.getElementById('d-ntc').textContent=Object.keys(ntcs||{}).length;});
+    aptList.forEach(apt=>{
+      listen('requests/'+apt,data=>{
+        const reqs=Object.values(data||{});
+        pending+=reqs.filter(r=>r.status==='pending').length;
+        document.getElementById('d-pend').textContent=pending;
+        document.getElementById('nav-cnt').textContent=pending;
+        const tbody=document.getElementById('dash-reqs');
+        tbody.innerHTML=reqs.slice(0,6).map(r=>`<tr><td>${esc(r.apt||apt)}</td><td>${esc(r.type)}</td><td><span class="badge b-${r.status}">${r.status}</span></td></tr>`).join('');
+      });
+      listen('checkins/'+apt,data=>{
+        const ci=Object.values(data||{});
+        todayCI+=ci.filter(c=>c.date===today).length;
+        document.getElementById('d-ci').textContent=todayCI;
+        allFeed=[...allFeed,...ci.map(c=>({text:apt+': Check-in '+c.mood,time:c.date}))];
+        document.getElementById('dash-feed').innerHTML=allFeed.slice(-8).reverse().map(i=>`<div class="feed-item"><div class="feed-dot"></div><div><div class="feed-text">${esc(i.text)}</div><div class="feed-time">${i.time}</div></div></div>`).join('');
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════
+// RESIDENTS
+// ══════════════════════════════════════════════════
+window.addResident=function(){
+  const apt=document.getElementById('r-apt').value.trim().toUpperCase();
+  const pass=document.getElementById('r-pass').value.trim();
+  const name=document.getElementById('r-name').value.trim();
+  const email=document.getElementById('r-email').value.trim();
+  const ctxt=document.getElementById('r-contacts').value.trim();
+  if(!apt||!pass||!name){aToast('Please fill Apartment, Passcode and Name.','error');return;}
+  const contacts=ctxt?ctxt.split(',').map(c=>{const[n,p]=c.trim().split(':');return{name:(n||'').trim(),phone:(p||'').trim()};}).filter(c=>c.name):[];
+  writeDB('apartments/'+apt,{passcode:pass,name,email,contacts}).then(()=>{
+    ['r-apt','r-pass','r-name','r-email','r-contacts'].forEach(id=>document.getElementById(id).value='');
+    toggleForm('add-resident-form');
+    renderResidents();
+    aToast('✅ Apartment '+apt+' added!');
+  });
+};
+
+function renderResidents(){
+  listen('apartments',apts=>{
+    const el=document.getElementById('residents-list');
+    if(!apts||!Object.keys(apts).length){el.innerHTML='<p style="color:var(--sub);padding:20px">No apartments yet. Add one above.</p>';return;}
+    el.innerHTML=Object.entries(apts).sort(([a],[b])=>a.localeCompare(b)).map(([apt,d])=>`
+      <div class="resident-card">
+        <div class="r-av">${(d.name||apt)[0].toUpperCase()}</div>
+        <div class="r-info">
+          <div class="r-name">${esc(d.name||apt)}</div>
+          <div class="r-sub">${esc(d.email||'No email')} &nbsp;·&nbsp; Passcode: <strong>${d.passcode}</strong></div>
+          <div class="r-apt">Flat ${esc(apt)}</div>
+          <div class="r-contacts">${(d.contacts||[]).map(c=>`<span class="r-contact-chip">👤 ${esc(c.name)} · ${c.phone}</span>`).join('')}</div>
+        </div>
+        <div class="r-actions">
+          <button class="btn btn-sm btn-ghost" onclick="editResident('${apt}')">✏️ Edit</button>
+          <button class="btn btn-sm btn-red" onclick="deleteResident('${apt}')">🗑️</button>
+        </div>
+      </div>`).join('');
+  });
+}
+
+window.deleteResident=function(apt){
+  confirm2('Delete Apartment','Remove Flat '+apt+' and all its data?',()=>{
+    deleteDB('apartments/'+apt).then(()=>{renderResidents();aToast('Apartment removed.');});
+  });
+};
+window.editResident=function(apt){
+  aToast('Edit: open the form, fill new values, and save again with same apartment number to overwrite.');
+};
+
+// ══════════════════════════════════════════════════
+// ACTIVITIES
+// ══════════════════════════════════════════════════
+window.addActivity=function(){
+  const name=document.getElementById('a-name').value.trim();
+  const tv=document.getElementById('a-time').value;
+  const loc=document.getElementById('a-loc').value.trim();
+  if(!name||!tv||!loc){aToast('Please fill all fields.','error');return;}
+  const[h,m]=tv.split(':').map(Number);
+  const ap=h>=12?'PM':'AM';const dh=h>12?h-12:h||12;
+  const time=dh+':'+m.toString().padStart(2,'0')+' '+ap;
+  pushDB('activities',{time,name,location:loc}).then(()=>{
+    ['a-name','a-time','a-loc'].forEach(id=>document.getElementById(id).value='');
+    toggleForm('add-act-form');renderActivities();
+    aToast('✅ Activity added — synced to all residents!');
+  });
+};
+window.deleteActivity=function(key){
+  confirm2('Delete Activity','Remove this activity from schedule?',()=>{
+    deleteDB('activities/'+key).then(()=>{renderActivities();aToast('Activity removed.');});
+  });
+};
+function renderActivities(){
+  listen('activities',data=>{
+    const acts=data?Object.entries(data):[]; 
+    document.getElementById('act-count').textContent=acts.length+' scheduled';
+    document.getElementById('act-table').innerHTML=acts.length?acts.map(([k,a])=>`
+      <tr><td><strong>${esc(a.time)}</strong></td><td>${esc(a.name)}</td><td style="color:var(--sub)">${esc(a.location)}</td>
+      <td><button class="btn-icon" onclick="deleteActivity('${k}')">🗑️</button></td></tr>`).join(''):
+      '<tr class="empty-row"><td colspan="4">No activities. Add one above.</td></tr>';
+  });
+}
+
+// ══════════════════════════════════════════════════
+// NOTICES
+// ══════════════════════════════════════════════════
+window.addNotice=function(){
+  const title=document.getElementById('n-title').value.trim();
+  const tag=document.getElementById('n-tag').value;
+  const body=document.getElementById('n-body').value.trim();
+  if(!title||!body){aToast('Please fill title and message.','error');return;}
+  const d=new Date();
+  const date=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();
+  pushDB('notices',{tag,title,body,date}).then(()=>{
+    ['n-title','n-body'].forEach(id=>document.getElementById(id).value='');
+    toggleForm('add-ntc-form');renderNotices();
+    aToast('📢 Notice posted — synced to all residents!');
+  });
+};
+window.deleteNotice=function(key){
+  confirm2('Delete Notice','Remove this notice for all residents?',()=>{
+    deleteDB('notices/'+key).then(()=>{renderNotices();aToast('Notice removed.');});
+  });
+};
+function renderNotices(){
+  listen('notices',data=>{
+    const ntcs=data?Object.entries(data).reverse():[];
+    document.getElementById('ntc-table').innerHTML=ntcs.length?ntcs.map(([k,n])=>`
+      <tr><td><span class="badge b-${n.tag}">${n.tag}</span></td><td><strong>${esc(n.title)}</strong></td>
+      <td style="font-size:12px;color:var(--sub)">${n.date||''}</td>
+      <td><button class="btn-icon" onclick="deleteNotice('${k}')">🗑️</button></td></tr>`).join(''):
+      '<tr class="empty-row"><td colspan="4">No notices yet.</td></tr>';
+  });
+}
+
+// ══════════════════════════════════════════════════
+// REQUESTS
+// ══════════════════════════════════════════════════
+let reqFilter='all';
+window.setFilter=function(f,btn){
+  reqFilter=f;
+  document.querySelectorAll('.f-tab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderRequests();
+};
+window.updateReqStatus=function(apt,key,status){
+  updateDB('requests/'+apt+'/'+key,{status}).then(()=>{renderRequests();updateNavCount();aToast('Request marked '+status+' ✓');});
+};
+window.deleteReq=function(apt,key){
+  confirm2('Delete Request','Remove this request permanently?',()=>{
+    deleteDB('requests/'+apt+'/'+key).then(()=>{renderRequests();aToast('Request deleted.');});
+  });
+};
+function updateNavCount(){
+  listen('apartments',apts=>{
+    let total=0;
+    Object.keys(apts||{}).forEach(apt=>{
+      listen('requests/'+apt,data=>{ total+=Object.values(data||{}).filter(r=>r.status==='pending').length; document.getElementById('nav-cnt').textContent=total; });
+    });
+  });
+}
+function renderRequests(){
+  listen('apartments',apts=>{
+    let allReqs=[];
+    Object.keys(apts||{}).forEach(apt=>{
+      listen('requests/'+apt,data=>{
+        const rows=Object.entries(data||{}).map(([k,v])=>({...v,_apt:apt,_key:k}));
+        allReqs=[...allReqs,...rows];
+        const filtered=reqFilter==='all'?allReqs:allReqs.filter(r=>r.status===reqFilter);
+        document.getElementById('req-table').innerHTML=filtered.length?filtered.map(r=>`
+          <tr><td><strong>${esc(r._apt)}</strong></td><td>${esc(r.type)}</td>
+          <td style="font-size:12px;color:var(--sub);max-width:140px">${esc(r.notes||'—')}</td>
+          <td style="font-size:12px;color:var(--sub)">${r.date||''}</td>
+          <td><span class="badge b-${r.status}">${r.status}</span></td>
+          <td><div class="action-btns">
+            ${r.status!=='completed'?`<button class="btn btn-sm btn-green" onclick="updateReqStatus('${r._apt}','${r._key}','completed')">✅</button>`:''}
+            ${r.status!=='rejected'?`<button class="btn btn-sm btn-red"   onclick="updateReqStatus('${r._apt}','${r._key}','rejected')">❌</button>`:''}
+            ${r.status!=='pending'?`<button class="btn btn-sm btn-yellow" onclick="updateReqStatus('${r._apt}','${r._key}','pending')">↩</button>`:''}
+            <button class="btn-icon" onclick="deleteReq('${r._apt}','${r._key}')">🗑️</button>
+          </div></td></tr>`).join(''):
+          '<tr class="empty-row"><td colspan="6">No requests found.</td></tr>';
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════
+// CHECK-INS & MOOD
+// ══════════════════════════════════════════════════
+function renderCheckins(){
+  const today=fmtShort(new Date());
+  listen('apartments',apts=>{
+    let totalCI=0,todayCI=0,latestMood='—',wellbeing=[];
+    Object.entries(apts||{}).forEach(([apt,aptData])=>{
+      listen('checkins/'+apt,ciData=>{
+        const cis=Object.values(ciData||{});
+        totalCI+=cis.length; todayCI+=cis.filter(c=>c.date===today).length;
+        document.getElementById('ci-total').textContent=totalCI;
+        document.getElementById('ci-today').textContent=todayCI;
+        document.getElementById('ci-table').innerHTML=[...document.getElementById('ci-table').innerHTML.split('<tr>').slice(0,1).join(''),...cis.slice(-10).reverse().map(c=>`<tr><td>${apt}</td><td>${c.date}</td><td style="font-size:20px">${c.mood}</td></tr>`)].join('');
+      });
+      listen('moodLog/'+apt,moodData=>{
+        const moods=Object.values(moodData||{});
+        if(moods.length){latestMood=moods[moods.length-1].emoji;document.getElementById('ci-mood').textContent=latestMood;}
+        const last=moods[moods.length-1];
+        const moodClass=last?(['Anxious','Sad','Unwell'].includes(last.label)?'dot-red':last.label==='Okay'?'dot-yellow':'dot-green'):'dot-yellow';
+        const lastCI=Object.values(ciData||{}).slice(-1)[0];
+        wellbeing.push({apt,name:aptData.name||apt,last:last,ci:lastCI,moodClass});
+        document.getElementById('wellbeing-list').innerHTML=wellbeing.map(w=>`
+          <div class="wellbeing-card">
+            <div class="wb-dot ${w.moodClass}"></div>
+            <div style="flex:1">
+              <div style="font-weight:700">${esc(w.name)} — <span style="color:var(--accent);font-size:13px">Flat ${esc(w.apt)}</span></div>
+              <div style="font-size:13px;color:var(--sub);margin-top:3px">
+                Last check-in: ${w.ci?w.ci.date+' '+w.ci.mood:'Never'} &nbsp;|&nbsp;
+                Mood: ${w.last?w.last.emoji+' '+w.last.label:'Not logged'}
+              </div>
+            </div>
+            <div style="font-size:28px">${w.last?w.last.emoji:'❓'}</div>
+          </div>`).join('');
+        document.getElementById('mood-table').innerHTML=moods.slice(-8).reverse().map(m=>`<tr><td>${apt}</td><td>${m.date}</td><td style="font-size:18px">${m.emoji}</td><td style="font-size:12px;color:var(--sub)">${esc(m.note||'—')}</td></tr>`).join('');
+      });
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+function refreshAll(){renderDashboard();}
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtShort(d){return d.getDate()+' '+MO[d.getMonth()];}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function arr2obj(arr){const o={};arr.forEach((v,i)=>o['id_'+i]=v);return o;}
+
+function aToast(msg,type='success'){
+  const t=document.getElementById('a-toast');t.textContent=msg;t.className='admin-toast '+type;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+let confirmCB=null;
+function confirm2(title,msg,cb){
+  document.getElementById('cm-title').textContent=title;
+  document.getElementById('cm-msg').textContent=msg;
+  confirmCB=cb;document.getElementById('confirm-modal').classList.add('show');
+}
+window.closeConfirm=function(){document.getElementById('confirm-modal').classList.remove('show');confirmCB=null;};
+document.getElementById('cm-yes').onclick=()=>{if(confirmCB)confirmCB();window.closeConfirm();};
+
+window.toggleForm=function(id,btn,openLabel,closeLabel){
+  const el=document.getElementById(id);
+  const isOpen=el.style.display==='block';
+  el.style.display=isOpen?'none':'block';
+  if(btn&&openLabel){btn.textContent=isOpen?openLabel:closeLabel;}
+};
+</script>
+</body>
+</html>
