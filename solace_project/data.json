@@ -1,0 +1,19 @@
+{
+  "apartments": {
+    "1A": {
+      "name": "Dhanabakkiyam",
+      "passcode": "dhana",
+      "email": "",
+      "contacts": []
+    },
+    "2A": {
+      "name": "Selvadharshini",
+      "passcode": "selva",
+      "email": "selvadharshinims@gmail.com",
+      "contacts": [
+        {"name": "son", "phone": "8056116846"},
+        {"name": "daughter", "phone": "6379311304"}
+      ]
+    }
+  }
+}

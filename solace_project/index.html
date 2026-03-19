@@ -682,13 +682,7 @@ window.goTo = function(s) {
 
 // ══════════════════════════════════════════════════
 // GREETING & QUOTES
-// ══════════════════════════════════════════════════
-function updateGreeting() {
-  const h=new Date().getHours();
-  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-  document.getElementById('greeting-text').textContent = g+', '+S.name+'!';
-  updateCIPrompt();
-}
+// ════════════════════════════════════════════════
 const QUOTES=[
   {t:'"The longer I live, the more beautiful life becomes."',a:'— FRANK LLOYD WRIGHT'},
   {t:'"You are never too old to set another goal or to dream a new dream."',a:'— C.S. LEWIS'},
@@ -696,8 +690,14 @@ const QUOTES=[
   {t:'"With age comes wisdom, and with wisdom comes peace."',a:'— UNKNOWN'},
   {t:'"The secret of staying young is to live honestly and slowly."',a:'— LUCILLE BALL'},
 ];
-function setQuote(){ const q=QUOTES[new Date().getDate()%QUOTES.length]; ... }
+function setQuote(){ const q=QUOTES[new Date().getDate()%QUOTES.length]; document.getElementById('daily-quote').textContent=q.t; document.getElementById('quote-author').textContent=q.a;  }
 
+function updateGreeting() {
+  const h=new Date().getHours();
+  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greeting-text').textContent = g+', '+S.name+'!';
+  updateCIPrompt();
+}
 // ══════════════════════════════════════════════════
 // CHECK-IN
 // ══════════════════════════════════════════════════
