@@ -14,15 +14,14 @@
  */
 
 export const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyBsZemdY7lXtV3YXMBaDdn3oii2yEWjA84",
+  authDomain: "solace-daabc.firebaseapp.com",
+  databaseURL: "https://solace-daabc-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "solace-daabc",
+  storageBucket: "solace-daabc.firebasestorage.app",
+  messagingSenderId: "939212599928",
+  appId: "1:939212599928:web:204aad338cd54e34a3338d"
 };
-
 /**
  * ADMIN CREDENTIALS (change these before deploying!)
  * Admin login is checked in admin.html
