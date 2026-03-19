@@ -538,7 +538,7 @@ const DEMO_DATA = {
 const FB_ON = !firebaseConfig.apiKey.includes('YOUR_');
 let db = null;
 if (FB_ON) {
-  try { const app = initializeApp(FB_CONFIG); db = getDatabase(app); document.getElementById('demo-note').style.display='none'; }
+  try { const app = initializeApp(firebaseConfig.); db = getDatabase(app); document.getElementById('demo-note').style.display='none'; }
   catch(e){ console.warn('Firebase failed:',e); }
 }
 
