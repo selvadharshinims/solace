@@ -503,6 +503,7 @@ import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.2/f
 import { getDatabase, ref, onValue, push, set, update, serverTimestamp, off }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+
 const firebaseConfig = {
   apiKey: "AIzaSyBsZemdY7lXtV3YXMBaDdn3oii2yEWjA84",
   authDomain: "solace-daabc.firebaseapp.com",
@@ -512,7 +513,6 @@ const firebaseConfig = {
   messagingSenderId: "939212599928",
   appId: "1:939212599928:web:204aad338cd54e34a3338d"
 };
-
 // ── DEMO APARTMENTS (used when Firebase not configured) ──
 const DEMO_APTS = {
   'A-101':{ passcode:'1234', name:'Meena Krishnan', email:'meena@example.com', contacts:[{name:'Son',phone:'9876543210'},{name:'Daughter',phone:'8765432109'}] },
@@ -538,7 +538,7 @@ const DEMO_DATA = {
 const FB_ON = !firebaseConfig.apiKey.includes('YOUR_');
 let db = null;
 if (FB_ON) {
-  try { const app = initializeApp(firebaseConfig.); db = getDatabase(app); document.getElementById('demo-note').style.display='none'; }
+  try { const app = initializeApp(firebaseConfig); db = getDatabase(app); document.getElementById('demo-note').style.display='none'; }
   catch(e){ console.warn('Firebase failed:',e); }
 }
 
